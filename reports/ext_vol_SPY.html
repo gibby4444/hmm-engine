@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>External volatility — SPY</title>
+<style>
+body{background:#0b1530;color:#e6edf7;font:15px/1.5 -apple-system,Segoe UI,Inter,sans-serif;margin:0}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:26px;margin:0 0 4px} h2{color:#2dd4bf;font-size:18px;margin:34px 0 10px;
+border-bottom:1px solid #22325f;padding-bottom:6px} h3{font-size:15px;margin:18px 0 6px}
+.sub{color:#93a3c4;font-size:13px} .card{background:#131f42;border:1px solid #22325f;
+border-radius:10px;padding:14px 16px;margin:12px 0} .verdict{border-left:4px solid #2dd4bf}
+.warn{border-left:4px solid #f59e0b} .bad{border-left:4px solid #f43f5e}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid #22325f;text-align:right}
+th:first-child,td:first-child{text-align:left} th{color:#2dd4bf;font-weight:600}
+tr.best td{background:rgba(45,212,191,.12)} img{max-width:100%;border-radius:8px}
+.tablewrap{overflow-x:auto} code{color:#2dd4bf} ul{margin:6px 0 6px 18px;padding:0}
+</style></head><body><main><h1>External volatility — SPY</h1>
+<div class="sub"> · generated 2026-10-20 10:38</div><div class="card ">External series: <b>VIX</b>. Point-in-time alignment: daily VIX settles after the equity close, so the value used at bar t is the prior session's print (1-bar publication lag). Feed failures degrade gracefully: the model runs without the feature and the live breaker fails safe (trips to defensive) on a missing reading.</div><h2>Circuit breaker — historical frequency and impact (out-of-sample)</h2><div class="tablewrap"><table><tr><th></th><th>bars tripped</th><th>% of bars</th><th>episodes</th><th>cagr</th><th>sharpe</th><th>max_dd</th><th>calmar</th><th>trades</th></tr><tr><td>no breaker</td><td>0</td><td>0.0%</td><td>0</td><td>9.1%</td><td>0.59</td><td>-39.2%</td><td>0.23</td><td>27</td></tr><tr><td>breaker > 20</td><td>1619</td><td>34.7%</td><td>141</td><td>4.9%</td><td>0.56</td><td>-23.0%</td><td>0.21</td><td>275</td></tr><tr><td>breaker > 25</td><td>810</td><td>17.4%</td><td>86</td><td>8.1%</td><td>0.72</td><td>-22.3%</td><td>0.36</td><td>167</td></tr><tr><td>breaker > 30</td><td>443</td><td>9.5%</td><td>49</td><td>8.4%</td><td>0.68</td><td>-32.4%</td><td>0.26</td><td>93</td></tr><tr><td>breaker > 35</td><td>253</td><td>5.4%</td><td>31</td><td>9.3%</td><td>0.69</td><td>-26.2%</td><td>0.35</td><td>67</td></tr><tr><td>breaker > 40</td><td>178</td><td>3.8%</td><td>22</td><td>9.6%</td><td>0.70</td><td>-24.5%</td><td>0.39</td><td>49</td></tr></table></div><div class="card warn">Read the sweep as a curve, not a menu. A level is robust only if its neighbours look similar; picking the single best row is curve-fitting with one more parameter.</div><h2>As a feature — states with vs without</h2><div class="tablewrap"><table><tr><th>set</th><th>oos_return_logscore</th><th>seed_ARI</th><th>min_avg_visit</th></tr><tr><td>equity_base</td><td>3.2385</td><td>0.89</td><td>24.2</td></tr><tr><td>equity_plus_vix</td><td>3.2383</td><td>0.92</td><td>30.4</td></tr></table></div><div class="card warn"><b>REVERT</b><ul><li>OOS return log score did not improve (-0.0002/bar)</li></ul></div></main></body></html>

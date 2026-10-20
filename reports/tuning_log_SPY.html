@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Tuning log — SPY</title>
+<style>
+body{background:#0b1530;color:#e6edf7;font:15px/1.5 -apple-system,Segoe UI,Inter,sans-serif;margin:0}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:26px;margin:0 0 4px} h2{color:#2dd4bf;font-size:18px;margin:34px 0 10px;
+border-bottom:1px solid #22325f;padding-bottom:6px} h3{font-size:15px;margin:18px 0 6px}
+.sub{color:#93a3c4;font-size:13px} .card{background:#131f42;border:1px solid #22325f;
+border-radius:10px;padding:14px 16px;margin:12px 0} .verdict{border-left:4px solid #2dd4bf}
+.warn{border-left:4px solid #f59e0b} .bad{border-left:4px solid #f43f5e}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid #22325f;text-align:right}
+th:first-child,td:first-child{text-align:left} th{color:#2dd4bf;font-weight:600}
+tr.best td{background:rgba(45,212,191,.12)} img{max-width:100%;border-radius:8px}
+.tablewrap{overflow-x:auto} code{color:#2dd4bf} ul{margin:6px 0 6px 18px;padding:0}
+</style></head><body><main><h1>Tuning log — SPY</h1>
+<div class="sub"> · generated 2026-10-20 10:41</div><div class="card warn"><b>5 trials logged.</b> To be believed, the current system's Sharpe must beat ≈<b>0.28</b> (annualised) — the best Sharpe you'd expect from 5 tries at pure noise. Deflated Sharpe probability: <b>91.2%</b> (≥95% is the conventional bar). The more you tune, the higher this bar gets. Note: DSR asks whether the Sharpe is distinguishable from luck, not whether it beats the baselines; a system that fails the validation harness fails regardless of its DSR.</div><h2>Experiment history</h2><div class="tablewrap"><table><tr><th>#</th><th>date</th><th>change</th><th>hypothesis</th><th>Sharpe before</th><th>Sharpe after</th><th>maxDD after</th><th>decision</th><th>reason</th></tr><tr><td>1</td><td>2026-10-20</td><td>baseline profile</td><td>starting point</td><td>—</td><td>0.59</td><td>-39.2%</td><td>BASELINE</td><td>FAIL — the MA200 filter matches or beats the HMM out-of-samp</td></tr><tr><td>2</td><td>2026-10-20</td><td>(a) equity_base vs equity_long — longer windows</td><td>feature-window/feature-add A/B</td><td>—</td><td>—</td><td>—</td><td>REVERT</td><td>OOS return log score did not improve (-0.0191/bar); stability dropped (ARI 0.89→0.62)</td></tr><tr><td>3</td><td>2026-10-20</td><td>(b) equity_base vs equity_short — shorter windows</td><td>feature-window/feature-add A/B</td><td>—</td><td>—</td><td>—</td><td>KEEP</td><td>OOS return log score improved +0.0071/bar</td></tr><tr><td>4</td><td>2026-10-20</td><td>(c) equity_base + trailing drawdown feature</td><td>feature-window/feature-add A/B</td><td>—</td><td>—</td><td>—</td><td>KEEP</td><td>OOS return log score improved +0.0213/bar</td></tr><tr><td>5</td><td>2026-10-20</td><td>detector bake-off (GMM, k-means)</td><td>simpler detector may match HMM</td><td>—</td><td>—</td><td>—</td><td>REVERT</td><td>No detector beats the simple floor out-of-sample (best detector Gaussian mixture: 0.68 Sharpe vs floor 0.85). Run the si</td></tr></table></div><h2>Current configuration & evidence trail</h2><div class="card "><pre style='white-space:pre-wrap;color:#e6edf7'>{
+ "feature_set": "equity_base",
+ "n_states": 3,
+ "gating": {
+  "confidence_threshold": 0.7,
+  "persistence_bars": 3,
+  "neutral_on_low_confidence": false
+ },
+ "sizing": {
+  "mode": "hard",
+  "floor_size": 0.5,
+  "full_conf": 0.95,
+  "mapping": "linear"
+ },
+ "retraining": {
+  "every_bars": 21,
+  "window": "expanding",
+  "window_bars": 2520,
+  "min_train_bars": 756,
+  "drift_ll_z": -3.0,
+  "drift_lowconf_frac": 0.6,
+  "drift_lookback": 20
+ },
+ "costs_bps": 2
+}</pre>Each setting above is backed by the KEEP/BASELINE row that introduced it in the history table.</div></main></body></html>

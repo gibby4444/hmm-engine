@@ -1,0 +1,197 @@
+# config/settings.yaml — every configurable number lives here (CLAUDE.md).
+# Per-asset tuning profiles (Prompt 4).
+# The bot loads the profile whose `symbols` list contains the traded symbol.
+# Nothing asset-specific is hard-coded anywhere else in the codebase.
+
+paper_trading: true        # NEVER default to live. This layer places no orders.
+
+hmm:
+  covariance_type: full
+  n_iter: 200
+  tol: 1.0e-4
+  min_covar: 1.0e-3
+  n_init: 3                # random restarts per fit; best log-likelihood kept
+
+tuning:
+  state_count_range: [2, 5]
+  stability_seeds: 5
+  holdout_frac: 0.25       # feature lab out-of-sample log-likelihood holdout
+  corr_warn: 0.85          # feature-pair correlation warning level
+  redundancy_z: 0.5        # states closer than this (std units) flagged redundant
+  ma_window: 200           # naive baseline regime filter
+  vol_target: 0.15         # vol-target single-strategy baseline
+  vol_target_lookback: 20
+  lag:
+    dd_threshold_equity: 0.10
+    dd_threshold_crypto: 0.20
+    vol_spike_mult: 2.0
+    min_gap_bars: 63
+  gate_grid:
+    thresholds: [0.5, 0.6, 0.7, 0.8, 0.9]
+    persistence: [1, 2, 3, 5, 8]
+  dsr_benchmark_trials_floor: 1
+
+logging:
+  dir: logs
+  file: regime_bot.jsonl
+
+defaults:
+  costs_bps: 5            # one-way cost per unit of turnover
+  bars_per_year: 252
+  risk:
+    max_gross_exposure: 1.0   # risk manager cap; ALWAYS outranks confidence sizing
+    max_position: 1.0
+
+profiles:
+
+  # ── Equity index ─────────────────────────────────────────────────────────
+  # Longer windows: equity regimes are slow (multi-month bull/bear cycles), and
+  # short windows mostly add noise. Slower retraining because the generating
+  # process is comparatively stable. VIX is the natural external vol series.
+  equity_index:
+    symbols: [SPY, QQQ, IWM, DIA, VOO]
+    bars_per_year: 252
+    costs_bps: 2
+    feature_set: equity_base
+    n_states: 3
+    gating:
+      confidence_threshold: 0.70
+      persistence_bars: 3
+      neutral_on_low_confidence: false
+    sizing:
+      mode: hard            # hard | confidence | both
+      floor_size: 0.5
+      full_conf: 0.95
+      mapping: linear       # linear | stepped
+    retraining:
+      every_bars: 21        # ~monthly
+      window: expanding     # expanding | rolling
+      window_bars: 2520     # used when window: rolling
+      min_train_bars: 756   # 3 years before first fit
+      drift_ll_z: -3.0      # early retrain if rolling log-lik z-score < this
+      drift_lowconf_frac: 0.6
+      drift_lookback: 20
+    external_vol:
+      series: VIX
+      as_feature: false     # flip after the feature-lab A/B says keep
+      circuit_breaker_level: 30
+      breaker_test_levels: [20, 25, 30, 35, 40]
+
+  # ── Crypto ───────────────────────────────────────────────────────────────
+  # Shorter windows: crypto regimes turn faster and vol clusters harder.
+  # Stricter gating because the raw HMM flickers more on fat-tailed returns.
+  # Faster retraining because the market's structure has changed repeatedly
+  # (retail-only → ETF/institutional era). 365 bars/yr: trades every day.
+  crypto:
+    symbols: [BTC-USD, ETH-USD, BTC, ETH]
+    bars_per_year: 365
+    costs_bps: 10
+    feature_set: crypto_base
+    n_states: 3
+    gating:
+      confidence_threshold: 0.80
+      persistence_bars: 3
+      neutral_on_low_confidence: false
+    sizing:
+      mode: hard
+      floor_size: 0.5
+      full_conf: 0.95
+      mapping: linear
+    retraining:
+      every_bars: 14
+      window: rolling
+      window_bars: 1095     # 3 years rolling
+      min_train_bars: 730
+      drift_ll_z: -3.0
+      drift_lowconf_frac: 0.6
+      drift_lookback: 14
+    external_vol:
+      series: rv_ratio      # short/long realized vol ratio (no free IV history)
+      as_feature: false
+      circuit_breaker_level: 2.0
+      breaker_test_levels: [1.5, 2.0, 2.5, 3.0]
+
+  # ── Intraday futures ─────────────────────────────────────────────────────
+  # Session-aware features (overnight gap vs RTH range), back-adjusted
+  # continuous contracts so rolls never look like price shocks, strict gating
+  # because intraday noise is the dominant failure mode.
+  futures_intraday:
+    symbols: [ES, NQ, MES, MNQ, CL]
+    bars_per_year: 6552     # ~26 x 15-min RTH bars x 252
+    costs_bps: 1
+    feature_set: futures_session
+    n_states: 3
+    session:
+      rth_start: "09:30"
+      rth_end: "16:00"
+      tz: America/New_York
+      rth_only: true
+    gating:
+      confidence_threshold: 0.80
+      persistence_bars: 4
+      neutral_on_low_confidence: true
+    sizing:
+      mode: hard
+      floor_size: 0.5
+      full_conf: 0.95
+      mapping: stepped
+    retraining:
+      every_bars: 1300      # ~weekly in 15-min RTH bars
+      window: rolling
+      window_bars: 13000
+      min_train_bars: 6500
+      drift_ll_z: -3.0
+      drift_lowconf_frac: 0.6
+      drift_lookback: 52
+    external_vol:
+      series: VIX
+      as_feature: false
+      circuit_breaker_level: 30
+      breaker_test_levels: [20, 25, 30, 35]
+
+# Feature sets (Prompt 3). Windows are in bars. All computed point-in-time.
+feature_sets:
+  equity_base:
+    - {name: ret, window: 5}
+    - {name: rvol, window: 21}
+    - {name: vol_ratio, window: 21}
+  equity_short:
+    - {name: ret, window: 3}
+    - {name: rvol, window: 10}
+    - {name: vol_ratio, window: 10}
+  equity_long:
+    - {name: ret, window: 10}
+    - {name: rvol, window: 42}
+    - {name: vol_ratio, window: 42}
+  equity_plus_dd:
+    - {name: ret, window: 5}
+    - {name: rvol, window: 21}
+    - {name: vol_ratio, window: 21}
+    - {name: drawdown, window: 63}
+  equity_plus_vix:
+    - {name: ret, window: 5}
+    - {name: rvol, window: 21}
+    - {name: vol_ratio, window: 21}
+    - {name: ext_vol, window: 1}
+  crypto_base:
+    - {name: ret, window: 3}
+    - {name: rvol, window: 14}
+    - {name: rv_ratio, window: 7}
+  crypto_short:
+    - {name: ret, window: 2}
+    - {name: rvol, window: 7}
+    - {name: rv_ratio, window: 5}
+  crypto_long:
+    - {name: ret, window: 7}
+    - {name: rvol, window: 30}
+    - {name: rv_ratio, window: 14}
+  crypto_plus_dd:
+    - {name: ret, window: 3}
+    - {name: rvol, window: 14}
+    - {name: rv_ratio, window: 7}
+    - {name: drawdown, window: 30}
+  futures_session:
+    - {name: ret, window: 4}
+    - {name: rvol, window: 26}
+    - {name: gap, window: 1}
+    - {name: range_ratio, window: 26}

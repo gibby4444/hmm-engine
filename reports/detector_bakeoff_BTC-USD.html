@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Detector bake-off — BTC-USD</title>
+<style>
+body{background:#0b1530;color:#e6edf7;font:15px/1.5 -apple-system,Segoe UI,Inter,sans-serif;margin:0}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:26px;margin:0 0 4px} h2{color:#2dd4bf;font-size:18px;margin:34px 0 10px;
+border-bottom:1px solid #22325f;padding-bottom:6px} h3{font-size:15px;margin:18px 0 6px}
+.sub{color:#93a3c4;font-size:13px} .card{background:#131f42;border:1px solid #22325f;
+border-radius:10px;padding:14px 16px;margin:12px 0} .verdict{border-left:4px solid #2dd4bf}
+.warn{border-left:4px solid #f59e0b} .bad{border-left:4px solid #f43f5e}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid #22325f;text-align:right}
+th:first-child,td:first-child{text-align:left} th{color:#2dd4bf;font-weight:600}
+tr.best td{background:rgba(45,212,191,.12)} img{max-width:100%;border-radius:8px}
+.tablewrap{overflow-x:auto} code{color:#2dd4bf} ul{margin:6px 0 6px 18px;padding:0}
+</style></head><body><main><h1>Detector bake-off — BTC-USD</h1>
+<div class="sub"> · generated 2026-10-20 10:40</div><div class="card verdict"><b>No detector beats the simple floor out-of-sample (best detector Gaussian mixture: 0.83 Sharpe vs floor 1.14). Run the simpler alternative.</b></div><div class="card ">Standing rule: complexity must beat the simpler alternative out-of-sample or it doesn't ship. All detectors use identical features, gating, walk-forward refits and costs.</div><div class="tablewrap"><table><tr><th></th><th>cagr</th><th>vol</th><th>sharpe</th><th>sortino</th><th>max_dd</th><th>calmar</th><th>exposure_avg</th><th>trades</th><th>cost_drag_ann</th><th>switches</th></tr><tr><td>HMM (tuned)</td><td>29.6%</td><td>61.9%</td><td>0.73</td><td>0.90</td><td>-83.4%</td><td>0.36</td><td>82%</td><td>68</td><td>0.69%</td><td>158</td></tr><tr><td>Gaussian mixture</td><td>37.7%</td><td>60.3%</td><td>0.83</td><td>1.07</td><td>-82.8%</td><td>0.46</td><td>85%</td><td>58</td><td>0.59%</td><td>96</td></tr><tr><td>k-means</td><td>37.7%</td><td>63.8%</td><td>0.82</td><td>1.06</td><td>-83.6%</td><td>0.45</td><td>90%</td><td>80</td><td>0.81%</td><td>352</td></tr><tr><td>MA200 filter</td><td>58.5%</td><td>52.5%</td><td>1.14</td><td>1.22</td><td>-70.1%</td><td>0.83</td><td>59%</td><td>68</td><td>0.69%</td><td>68</td></tr><tr><td>single: vol target 15%</td><td>18.6%</td><td>18.6%</td><td>1.01</td><td>1.37</td><td>-31.9%</td><td>0.58</td><td>31%</td><td>3624</td><td>0.55%</td><td>0</td></tr></table></div></main></body></html>
