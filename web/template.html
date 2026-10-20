@@ -1,0 +1,502 @@
+<title>Regime Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: instrument panel — control rail on the left, scoreboard + tape on the right, lab results below. */
+:root {
+  --bg: #0b1530; --panel: #111d40; --panel-2: #16244d; --line: #22325f;
+  --fg: #e6edf7; --muted: #93a3c4; --accent: #2dd4bf; --accent-ink: #062a26;
+  --good: #34d399; --bad: #fb7185; --warn: #fbbf24;
+  --s0: #2dd4bf; --s1: #60a5fa; --s2: #f59e0b; --s3: #f43f5e; --sn: #475569;
+  --c-hmm: #2dd4bf; --c-ma: #f59e0b; --c-vt: #a78bfa; --c-bh: #94a3b8;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f3f6fb; --panel: #ffffff; --panel-2: #eaf0f8; --line: #d3dcea;
+  --fg: #0f1b3d; --muted: #52618a; --accent: #0d9488; --accent-ink: #ffffff;
+  --good: #059669; --bad: #e11d48; --warn: #b45309;
+  --s0: #0d9488; --s1: #2563eb; --s2: #d97706; --s3: #e11d48; --sn: #94a3b8;
+  --c-hmm: #0d9488; --c-ma: #d97706; --c-vt: #7c3aed; --c-bh: #64748b; color-scheme: light } }
+:root[data-theme="light"] {
+  --bg: #f3f6fb; --panel: #ffffff; --panel-2: #eaf0f8; --line: #d3dcea;
+  --fg: #0f1b3d; --muted: #52618a; --accent: #0d9488; --accent-ink: #ffffff;
+  --good: #059669; --bad: #e11d48; --warn: #b45309;
+  --s0: #0d9488; --s1: #2563eb; --s2: #d97706; --s3: #e11d48; --sn: #94a3b8;
+  --c-hmm: #0d9488; --c-ma: #d97706; --c-vt: #7c3aed; --c-bh: #64748b; color-scheme: light }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f-body); margin: 0 }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 20px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0 }
+h1 { font-size: 28px; letter-spacing: .01em }
+h2 { font-size: 19px }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600 }
+.mono, td, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums }
+.muted { color: var(--muted) }
+.small { font-size: 13px }
+
+header.top { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between;
+  padding-bottom: 16px; border-bottom: 1px solid var(--line) }
+.brand { display: flex; flex-direction: column; gap: 2px; min-width: 0 }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden }
+.seg button { font: 600 13px var(--f-display); letter-spacing: .04em; background: transparent; color: var(--muted);
+  border: 0; padding: 8px 14px; cursor: pointer }
+.seg button + button { border-left: 1px solid var(--line) }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink) }
+.seg button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+.verdict { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--line); margin-top: 18px }
+.pill { font: 700 13px var(--f-display); letter-spacing: .1em; padding: 5px 11px; border-radius: 999px; white-space: nowrap }
+.pill.pass { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good) }
+.pill.fail { background: color-mix(in srgb, var(--bad) 22%, transparent); color: var(--bad) }
+.verdict p { margin: 0; min-width: 0 }
+
+.grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; margin-top: 18px }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr } }
+
+.rail { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px;
+  display: flex; flex-direction: column; gap: 18px; align-self: start }
+.group { display: flex; flex-direction: column; gap: 12px }
+.ctl { display: flex; flex-direction: column; gap: 5px }
+.ctl label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted) }
+.ctl label output { color: var(--fg); font-family: var(--f-mono) }
+input[type=range] { width: 100%; accent-color: var(--accent) }
+select, input[type=number] { font: 14px var(--f-body); background: var(--panel-2); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100% }
+.check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted) }
+.check input { accent-color: var(--accent) }
+.hint { font-size: 12px; color: var(--muted); line-height: 1.4 }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap }
+.btn { font: 600 13px var(--f-display); letter-spacing: .03em; padding: 8px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg) }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+
+.main { display: flex; flex-direction: column; gap: 18px; min-width: 0 }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0 }
+.cardhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px }
+
+.tablewrap { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: 13px }
+th, td { padding: 7px 9px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap }
+th { font: 600 12px var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
+th:first-child, td:first-child { text-align: left; font-family: var(--f-body) }
+tr.me td { background: color-mix(in srgb, var(--accent) 10%, transparent) }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: -1px }
+td.win { color: var(--good) }
+td.lose { color: var(--bad) }
+
+.chartbox { position: relative; width: 100% }
+canvas { display: block; width: 100%; touch-action: pan-y }
+.tip { position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; font: 12px/1.5 var(--f-mono); white-space: nowrap; z-index: 2 }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted) }
+.legend button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 2px 0 }
+.legend button[aria-pressed="false"] { opacity: .4; text-decoration: line-through }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px }
+.stat { background: var(--panel-2); border-radius: 8px; padding: 10px 12px }
+.stat b { display: block; font: 500 20px var(--f-mono); color: var(--fg) }
+.stat span { font-size: 12px; color: var(--muted) }
+
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-top: 28px }
+.tabs button { font: 600 14px var(--f-display); letter-spacing: .03em; background: none; border: 0; color: var(--muted);
+  padding: 10px 12px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px }
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent) }
+.panel { padding-top: 16px; display: flex; flex-direction: column; gap: 16px }
+.panel p { max-width: 68ch; margin: 0 }
+.tag { font: 600 11px var(--f-display); letter-spacing: .08em; padding: 3px 8px; border-radius: 999px;
+  text-transform: uppercase; white-space: nowrap }
+.tag.keep, .tag.baseline { background: color-mix(in srgb, var(--good) 20%, transparent); color: var(--good) }
+.tag.revert { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad) }
+.note { border-left: 3px solid var(--warn); padding: 8px 12px; background: var(--panel-2); border-radius: 0 8px 8px 0; font-size: 13px }
+pre.yaml { background: var(--panel-2); border-radius: 8px; padding: 12px; font: 12.5px/1.5 var(--f-mono); overflow-x: auto; margin: 0 }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 8px; font: 600 13px var(--f-display) }
+@media (prefers-reduced-motion: no-preference) { .pill, .stat b { transition: color .2s, background .2s } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Regime Desk</h1>
+      <div class="small muted" id="subtitle">HMM regime layer · walk-forward, out-of-sample</div>
+    </div>
+    <div class="seg" role="group" aria-label="Asset" id="assetSeg"></div>
+  </header>
+
+  <div class="verdict" id="verdict" aria-live="polite"></div>
+
+  <div class="grid">
+    <aside class="rail" aria-label="Controls">
+      <div class="group">
+        <h3>Gating</h3>
+        <div class="ctl"><label for="thr">Confidence threshold <output id="thrOut"></output></label>
+          <input type="range" id="thr" min="0.4" max="0.97" step="0.01"></div>
+        <div class="ctl"><label for="per">Persistence (bars) <output id="perOut"></output></label>
+          <input type="range" id="per" min="1" max="12" step="1"></div>
+        <label class="check"><input type="checkbox" id="neu"> Go to cash when nothing clears the threshold</label>
+      </div>
+      <div class="group">
+        <h3>Position sizing</h3>
+        <div class="ctl"><label for="mode">Mode</label>
+          <select id="mode">
+            <option value="hard">Hard gating — full size or flat</option>
+            <option value="confidence">Confidence scaling only (no gate)</option>
+            <option value="both">Gate, then scale by confidence</option>
+          </select></div>
+        <div class="ctl" id="floorCtl"><label for="floor">Size at threshold <output id="floorOut"></output></label>
+          <input type="range" id="floor" min="0.1" max="1" step="0.05"></div>
+        <div class="ctl" id="fullCtl"><label for="full">Full size at probability <output id="fullOut"></output></label>
+          <input type="range" id="full" min="0.75" max="0.99" step="0.01"></div>
+      </div>
+      <div class="group">
+        <h3>Circuit breaker</h3>
+        <label class="check"><input type="checkbox" id="brkOn"> <span id="brkLabel">Force cash when VIX is above</span></label>
+        <div class="ctl"><label for="brk"><span id="brkName">Level</span> <output id="brkOut"></output></label>
+          <input type="range" id="brk"></div>
+        <div class="hint" id="brkHint"></div>
+      </div>
+      <div class="group">
+        <h3>Costs</h3>
+        <div class="ctl"><label for="cost">One-way cost (bps) <output id="costOut"></output></label>
+          <input type="range" id="cost" min="0" max="30" step="1"></div>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="reset" type="button">Reset to profile</button>
+        <button class="btn primary" id="copy" type="button">Copy settings</button>
+      </div>
+      <div class="hint">Every change re-runs gating, sizing and the backtest on the cached walk-forward probabilities. Retraining, feature and state-count changes need the Python harness; their results are in the Lab tabs below.</div>
+    </aside>
+
+    <section class="main">
+      <div class="card">
+        <div class="cardhead"><h2>Scoreboard</h2><span class="small muted" id="period"></span></div>
+        <div class="tablewrap"><table id="score"></table></div>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><h2>Equity, log scale</h2><div class="legend" id="legend"></div></div>
+        <div class="chartbox" id="chartbox"><canvas id="chart" height="360" aria-label="Equity curves"></canvas><div class="tip" id="tip" hidden></div></div>
+        <div class="legend" id="stateLegend" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><h2>What the gates did</h2></div>
+        <div class="stats" id="gateStats"></div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Lab results" id="tabs"></nav>
+  <div id="panels"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>__ENGINE__</script>
+<script>
+(() => {
+const D = JSON.parse(document.getElementById("data").textContent);
+const SYMS = Object.keys(D.assets);
+for (const s of SYMS) Engine.prepare(D.assets[s]);
+const $ = (id) => document.getElementById(id);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const pct = (x, d = 1) => x == null || !isFinite(x) ? "—" : (x * 100).toFixed(d) + "%";
+const fx = (x, d = 2) => x == null || !isFinite(x) ? "—" : x.toFixed(d);
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+
+let sym = store.get("rd.sym"); if (!SYMS.includes(sym)) sym = SYMS[0];
+const opts = {};
+function defaults(A) {
+  return { threshold: A.gate.threshold, persistence: A.gate.persistence, neutral: A.gate.neutral,
+    mode: A.sizing.mode, floor: A.sizing.floor, full: A.sizing.full, mapping: A.sizing.mapping,
+    breakerOn: false, breaker: A.breaker_default, costs: A.costs_bps };
+}
+for (const s of SYMS) opts[s] = Object.assign(defaults(D.assets[s]), store.get("rd.o." + s) || {});
+
+const SERIES = [
+  { key: "hmm", name: "HMM regime", color: "--c-hmm" },
+  { key: "ma", name: "200-day MA filter", color: "--c-ma" },
+  { key: "vt", name: "Vol target 15%", color: "--c-vt" },
+  { key: "bh", name: "Buy & hold", color: "--c-bh" },
+];
+const shown = { hmm: true, ma: true, vt: true, bh: true };
+let last = null;
+
+// ── asset switch ───────────────────────────────────────────
+const seg = $("assetSeg");
+SYMS.forEach((s) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = s.replace("-USD", "");
+  b.onclick = () => { sym = s; store.set("rd.sym", s); syncControls(); render(); renderLab(); };
+  seg.appendChild(b);
+});
+
+// ── controls ───────────────────────────────────────────────
+function syncControls() {
+  const A = D.assets[sym], o = opts[sym];
+  [...seg.children].forEach((b, i) => b.setAttribute("aria-pressed", SYMS[i] === sym));
+  $("thr").value = o.threshold; $("per").value = o.persistence; $("neu").checked = o.neutral;
+  $("mode").value = o.mode; $("floor").value = o.floor; $("full").value = o.full; $("cost").value = o.costs;
+  const isVix = A.ext_name === "VIX";
+  const b = $("brk");
+  b.min = isVix ? 15 : 1.0; b.max = isVix ? 50 : 4.0; b.step = isVix ? 1 : 0.1;
+  b.value = o.breaker; $("brkOn").checked = o.breakerOn;
+  $("brkLabel").textContent = isVix ? "Force cash when VIX is above the level" : "Force cash when short/long realized-vol ratio is above the level";
+  $("brkName").textContent = isVix ? "VIX level" : "Vol ratio (7-day ÷ 56-day)";
+  $("brkHint").textContent = isVix ? "VIX is lagged one session: it settles after the equity close." :
+    "Crypto has no free implied-vol history here, so the breaker uses realized-vol expansion.";
+  $("subtitle").textContent = `${A.symbol} · ${A.profile.replace("_", " ")} profile · ${A.n_states} states · features ${A.features.join(", ")}`;
+  outputs();
+}
+function outputs() {
+  const o = opts[sym];
+  $("thrOut").textContent = (+o.threshold).toFixed(2);
+  $("perOut").textContent = o.persistence;
+  $("floorOut").textContent = pct(+o.floor, 0);
+  $("fullOut").textContent = (+o.full).toFixed(2);
+  $("brkOut").textContent = o.breakerOn ? (+o.breaker).toString() : "off";
+  $("costOut").textContent = o.costs;
+  const scaled = o.mode !== "hard";
+  $("floorCtl").hidden = !scaled; $("fullCtl").hidden = !scaled;
+  $("per").disabled = o.mode === "confidence"; $("neu").disabled = o.mode === "confidence";
+  $("brk").disabled = !o.breakerOn;
+}
+const bind = (id, key, cast, ev = "input") => $(id).addEventListener(ev, (e) => {
+  opts[sym][key] = cast(e.target); store.set("rd.o." + sym, opts[sym]); outputs(); schedule();
+});
+bind("thr", "threshold", (t) => +t.value); bind("per", "persistence", (t) => +t.value);
+bind("neu", "neutral", (t) => t.checked, "change"); bind("mode", "mode", (t) => t.value, "change");
+bind("floor", "floor", (t) => +t.value); bind("full", "full", (t) => +t.value);
+bind("brkOn", "breakerOn", (t) => t.checked, "change"); bind("brk", "breaker", (t) => +t.value);
+bind("cost", "costs", (t) => +t.value);
+$("reset").onclick = () => { opts[sym] = defaults(D.assets[sym]); store.set("rd.o." + sym, opts[sym]); syncControls(); render(); toast("Reset to the profile in settings.yaml"); };
+$("copy").onclick = async () => {
+  const txt = yamlSnippet();
+  try { await navigator.clipboard.writeText(txt); toast("Copied — paste into config/settings.yaml"); }
+  catch { showYaml(txt); }
+};
+function yamlSnippet() {
+  const A = D.assets[sym], o = opts[sym];
+  return `# ${A.symbol} → profiles.${A.profile} in config/settings.yaml
+    costs_bps: ${o.costs}
+    gating:
+      confidence_threshold: ${(+o.threshold).toFixed(2)}
+      persistence_bars: ${o.persistence}
+      neutral_on_low_confidence: ${o.neutral}
+    sizing:
+      mode: ${o.mode}
+      floor_size: ${(+o.floor).toFixed(2)}
+      full_conf: ${(+o.full).toFixed(2)}
+      mapping: ${o.mapping}
+    external_vol:
+      circuit_breaker_level: ${o.breakerOn ? o.breaker : "null  # off"}
+# then: python -m tuning.tuning_log record --symbol ${A.symbol} --change "..." --hypothesis "..." --decision keep|revert --reason "..."`;
+}
+function showYaml(txt) {
+  const p = document.querySelector('[data-panel="apply"]');
+  selectTab("apply");
+  p.querySelector("pre").textContent = txt;
+  const r = document.createRange(); r.selectNodeContents(p.querySelector("pre"));
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  toast("Clipboard blocked — text selected below, copy it manually");
+}
+let tt;
+function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+
+let raf;
+function schedule() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
+
+// ── compute + render ───────────────────────────────────────
+function render() {
+  const A = D.assets[sym], o = opts[sym];
+  const res = Engine.run(A, { ...o, breaker: o.breakerOn ? o.breaker : null });
+  last = { A, res };
+  const single = res.single, singleName = single === "vt" ? "vol target 15%" : "buy & hold";
+  const h = res.hmm, m = res.ma, s = res[single];
+  const v = $("verdict");
+  if (res.pass) {
+    v.innerHTML = `<span class="pill pass">PASS</span><p>The HMM beats both baselines out-of-sample on Sharpe: <b class="num">${fx(h.sharpe)}</b> vs MA filter <span class="num">${fx(m.sharpe)}</span> and ${singleName} <span class="num">${fx(s.sharpe)}</span>. Next: log it as a trial and paper trade.</p>`;
+  } else {
+    const loser = h.sharpe <= m.sharpe ? `the 200-day MA filter (${fx(m.sharpe)})` : `${singleName} (${fx(s.sharpe)})`;
+    v.innerHTML = `<span class="pill fail">FAIL</span><p>HMM Sharpe <b class="num">${fx(h.sharpe)}</b> doesn't beat ${loser}. The regime layer needs to beat both the MA filter and ${singleName} to earn its complexity.</p>`;
+  }
+  $("period").textContent = `${A.dates[A.oos_start]} → ${A.dates[A.dates.length - 1]} · ${((A.dates.length - A.oos_start) / A.bpy).toFixed(1)} years`;
+  const cols = [["CAGR", "cagr", pct], ["Volatility", "vol", pct], ["Sharpe", "sharpe", fx], ["Sortino", "sortino", fx],
+                ["Max drawdown", "max_dd", pct], ["Calmar", "calmar", fx], ["Avg exposure", "exposure", (x) => pct(x, 0)],
+                ["Trades", "trades", (x) => x], ["Cost drag/yr", "cost_drag", (x) => pct(x, 2)]];
+  const better = { cagr: 1, vol: -1, sharpe: 1, sortino: 1, max_dd: 1, calmar: 1 };
+  let html = "<tr><th>System</th>" + cols.map((c) => `<th>${c[0]}</th>`).join("") + "</tr>";
+  for (const S of SERIES) {
+    const r = res[S.key];
+    html += `<tr class="${S.key === "hmm" ? "me" : ""}"><td><span class="swatch" style="background:var(${S.color})"></span>${S.name}${S.key === single ? " <span class='muted small'>(benchmark)</span>" : ""}</td>`;
+    for (const [, k, f] of cols) {
+      let cls = "";
+      if (S.key === "hmm" && better[k]) {
+        const bm = [res.ma[k], res[single][k]];
+        cls = bm.every((x) => better[k] * r[k] > better[k] * x) ? "win" : bm.every((x) => better[k] * r[k] < better[k] * x) ? "lose" : "";
+      }
+      html += `<td class="${cls}">${f(r[k])}</td>`;
+    }
+    html += "</tr>";
+  }
+  $("score").innerHTML = html;
+  const g = res.gate;
+  let stressBars = 0, cashBars = 0;
+  for (let t = 0; t < g.regime.length; t++) { if (g.regime[t] === A.n_states - 1) stressBars++; if (res.exp[A.oos_start + t] <= 1e-9) cashBars++; }
+  const stats = [
+    [g.flickers, "raw state changes (ungated)"], [g.switches, "confirmed regime switches"],
+    [pct(1 - g.switches / Math.max(1, g.flickers), 0), "of flicker absorbed by the gates"],
+    [res.hmm.trades, "exposure changes (trades)"], [pct(cashBars / g.regime.length, 0), "of days in cash"],
+    [res.maSwitches, "MA-filter switches, for scale"],
+  ];
+  $("gateStats").innerHTML = stats.map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
+  drawChart();
+}
+
+// ── chart ──────────────────────────────────────────────────
+const cv = $("chart"), tip = $("tip");
+function legend() {
+  $("legend").innerHTML = "";
+  for (const S of SERIES) {
+    const b = document.createElement("button"); b.type = "button";
+    b.setAttribute("aria-pressed", shown[S.key]);
+    b.innerHTML = `<span class="swatch" style="background:var(${S.color})"></span>${S.name}`;
+    b.onclick = () => { shown[S.key] = !shown[S.key]; legend(); drawChart(); };
+    $("legend").appendChild(b);
+  }
+}
+function drawChart(hoverX) {
+  if (!last) return;
+  const { A, res } = last;
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientWidth < 520 ? 300 : 360;
+  cv.style.height = H + "px"; cv.width = W * dpr; cv.height = H * dpr;
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+  const padL = 46, padR = 12, padT = 10, bandH = 14, padB = 22 + bandH + 8;
+  const n = res.hmm.eq.length, pw = W - padL - padR, ph = H - padT - padB;
+  let lo = Infinity, hi = -Infinity;
+  for (const S of SERIES) if (shown[S.key]) for (const v of res[S.key].eq) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (!isFinite(lo)) { lo = 0.5; hi = 2; }
+  const L0 = Math.log10(lo) - 0.02, L1 = Math.log10(hi) + 0.02;
+  const X = (i) => padL + (i / (n - 1)) * pw, Y = (v) => padT + (1 - (Math.log10(v) - L0) / (L1 - L0)) * ph;
+  c.font = `11px ${css("--f-mono")}`; c.fillStyle = css("--muted"); c.strokeStyle = css("--line"); c.lineWidth = 1;
+  // y ticks at "nice" multiples
+  const ticks = []; const cand = [0.1, 0.2, 0.25, 0.5, 1, 1.5, 2, 3, 4, 5, 7, 10, 15, 20, 30, 50, 100, 200, 500, 1000];
+  for (const t of cand) if (t >= lo * 0.98 && t <= hi * 1.02) ticks.push(t);
+  const step = Math.ceil(ticks.length / 6);
+  ticks.filter((_, i) => i % step === 0).forEach((t) => {
+    const y = Y(t); c.beginPath(); c.moveTo(padL, y); c.lineTo(W - padR, y); c.globalAlpha = .6; c.stroke(); c.globalAlpha = 1;
+    c.textAlign = "right"; c.textBaseline = "middle"; c.fillText(t + "×", padL - 6, y);
+  });
+  // x ticks: years
+  c.textAlign = "center"; c.textBaseline = "top";
+  let lastYear = null; const i0 = A.oos_start;
+  const yrs = []; for (let i = 0; i < n; i++) { const y = A.dates[i0 + i].slice(0, 4); if (y !== lastYear) { yrs.push([i, y]); lastYear = y; } }
+  const every = Math.ceil(yrs.length / Math.max(2, Math.floor(pw / 56)));
+  yrs.forEach(([i, y], k) => { if (k % every === 0 && i > 0) c.fillText(y, X(i), H - 20); });
+  // regime band
+  const by = padT + ph + 8, sc = ["--s0", "--s1", "--s2", "--s3"].map(css), nc = css("--sn");
+  const reg = res.gate.regime;
+  for (let i = 0; i < n; i++) { c.fillStyle = reg[i] < 0 ? nc : sc[reg[i] % 4]; c.fillRect(X(i), by, Math.max(1, pw / n + 0.5), bandH); }
+  // lines
+  for (const S of [...SERIES].reverse()) {
+    if (!shown[S.key]) continue;
+    const eq = res[S.key].eq; c.strokeStyle = css(S.color); c.lineWidth = S.key === "hmm" ? 2 : 1.25;
+    c.beginPath(); const stepI = Math.max(1, Math.floor(n / (pw * 1.5)));
+    for (let i = 0; i < n; i += stepI) { const x = X(i), y = Y(eq[i]); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+    c.lineTo(X(n - 1), Y(eq[n - 1])); c.stroke();
+    c.fillStyle = css(S.color); c.beginPath(); c.arc(X(n - 1), Y(eq[n - 1]), 3, 0, 7); c.fill();
+  }
+  if (hoverX != null) {
+    const i = Math.max(0, Math.min(n - 1, Math.round((hoverX - padL) / pw * (n - 1))));
+    c.strokeStyle = css("--muted"); c.lineWidth = 1; c.setLineDash([3, 3]);
+    c.beginPath(); c.moveTo(X(i), padT); c.lineTo(X(i), by + bandH); c.stroke(); c.setLineDash([]);
+    const s = reg[i];
+    const st = s < 0 ? "cash (neutral)" : A.states.names[s] || ("state " + s);
+    tip.innerHTML = `<b>${A.dates[i0 + i]}</b><br>regime: ${st} · exp ${pct(res.exp[i0 + i], 0)}<br>` +
+      SERIES.filter((S) => shown[S.key]).map((S) => `<span style="color:var(${S.color})">●</span> ${S.name}: ${fx(res[S.key].eq[i])}×`).join("<br>");
+    tip.hidden = false;
+    const tw = tip.offsetWidth; let left = X(i) + 12; if (left + tw > W) left = X(i) - tw - 12;
+    tip.style.left = Math.max(0, left) + "px"; tip.style.top = padT + 4 + "px";
+  } else tip.hidden = true;
+  $("stateLegend").innerHTML = A.states.names.map((nm, k) => `<span><span class="swatch" style="background:var(--s${k})"></span>${nm}</span>`).join("") +
+    `<span><span class="swatch" style="background:var(--sn)"></span>cash (neutral)</span><span>band = confirmed regime after gating</span>`;
+}
+cv.addEventListener("mousemove", (e) => drawChart(e.offsetX));
+cv.addEventListener("mouseleave", () => drawChart());
+cv.addEventListener("touchmove", (e) => { const r = cv.getBoundingClientRect(); drawChart(e.touches[0].clientX - r.left); }, { passive: true });
+window.addEventListener("resize", () => drawChart());
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => drawChart());
+new MutationObserver(() => drawChart()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+// ── lab tabs (precomputed) ─────────────────────────────────
+const TABS = [["states", "States"], ["lab", "Feature lab"], ["count", "State count"], ["lag", "Detection lag"],
+              ["bake", "Bake-off"], ["log", "Tuning log"], ["refits", "Refits"], ["apply", "Apply a change"]];
+const tabs = $("tabs"), panels = $("panels");
+TABS.forEach(([k, label]) => {
+  const b = document.createElement("button"); b.type = "button"; b.role = "tab"; b.id = "tab-" + k; b.textContent = label;
+  b.onclick = () => selectTab(k); tabs.appendChild(b);
+  const p = document.createElement("div"); p.className = "panel"; p.dataset.panel = k; p.setAttribute("role", "tabpanel"); p.hidden = true;
+  panels.appendChild(p);
+});
+function selectTab(k) {
+  store.set("rd.tab", k);
+  [...tabs.children].forEach((b) => b.setAttribute("aria-selected", b.id === "tab-" + k));
+  [...panels.children].forEach((p) => p.hidden = p.dataset.panel !== k);
+}
+function tbl(t, opts = {}) {
+  if (!t) return "<p class='muted'>Not available.</p>";
+  const cols = t.columns.map((c) => c.startsWith("Unnamed") ? "" : c);
+  let h = "<div class='tablewrap'><table><tr>" + cols.map((c) => `<th>${c}</th>`).join("") + "</tr>";
+  for (const r of t.rows) h += "<tr>" + r.map((v) => `<td>${v == null ? "—" : typeof v === "number" ? (Math.abs(v) < 10 && !Number.isInteger(v) ? v.toFixed(3) : v) : v}</td>`).join("") + "</tr>";
+  return h + "</table></div>";
+}
+function renderLab() {
+  const A = D.assets[sym], R = A.reports;
+  const P = (k) => panels.querySelector(`[data-panel="${k}"]`);
+  const st = A.states.table;
+  const stt = { columns: ["state", "name", ...st.columns], rows: st.rows.map((r, i) => [i, A.states.names[i], ...r]) };
+  const pctCols = new Set(["share", "ret_mean_ann", "ret_std_ann", "fwd_ret_ann", "realized_vol"]);
+  stt.rows = stt.rows.map((r) => r.map((v, j) => pctCols.has(stt.columns[j]) && typeof v === "number" ? pct(v) : typeof v === "number" ? +v.toFixed(2) : v));
+  const allLong = A.playbooks[A.playbooks.length - 1].every((x) => x > 0);
+  P("states").innerHTML = `<p>What the latest model thinks the market states are, with statistics from forward-only (filtered) assignments over the full history. <span class="muted">ret = annualised return while in the state; fwd = the next day's return, which is what the router trades on.</span></p>` +
+    tbl(stt) + (allLong ? `<div class="note">In the latest refit every state has positive next-day return, so every state maps to <b>long</b>. That makes the regime layer behave like buy-and-hold with extra noise. The fix is a router that runs a genuinely different strategy per state (core/hmm_engine.py: state_playbook).</div>` : "");
+  const fl = R.feature_lab || [];
+  const flog = A.tuning_log.filter((e) => /^\([abc]\)/.test(e.change));
+  P("lab").innerHTML = `<p>Each experiment fits both feature sets on the first 75% of history and scores next-day returns on the held-out 25%. Higher log score is better. KEEP means provisional: it still has to pass the walk-forward scoreboard.</p>` +
+    fl.map((t, i) => `<div class="card"><div class="cardhead"><h2>${flog[i] ? flog[i].change : "Experiment " + (i + 1)}</h2>${flog[i] ? `<span class="tag ${flog[i].decision}">${flog[i].decision}</span>` : ""}</div>${tbl(t)}${flog[i] ? `<p class="small muted" style="margin-top:8px">${flog[i].reason}</p>` : ""}</div>`).join("");
+  const sc = R.state_count || [];
+  P("count").innerHTML = `<p>The model fitted with 2 to 5 states, 5 random seeds each. BIC/AIC shortlist candidates; they always reward more states on fat-tailed returns. Seed ARI near 1 means the states come out the same every refit. The deciding test is whether every state is nameable and trades differently.</p>` +
+    (sc[0] ? tbl(sc[0]) : "") + sc.slice(1).map((t, i) => `<h3>${i + 2} states</h3>${tbl(t)}`).join("");
+  const lg = R.detection_lag || [];
+  P("lag").innerHTML = `<p>Reference turns are identified with hindsight: peaks before big drawdowns, volatility spikes, and drawdown troughs. Lag is how many bars later the gated model confirmed its stress state ("state lag") or the position actually went to cash ("exposure lag"). Adverse move is the price change paid while waiting.</p>` +
+    (lg[0] ? `<h3>Current settings</h3>${tbl(lg[0])}` : "") + (lg[2] ? `<h3>Lag vs false alarms across gate settings</h3>${tbl(lg[2])}` : "") + (lg[1] ? `<h3>Every turn</h3>${tbl(lg[1])}` : "");
+  P("bake").innerHTML = `<p>The same features, gating, walk-forward refits and costs, with the HMM swapped for simpler detectors. Complexity has to beat the simpler alternative out-of-sample or it doesn't ship.</p>` + tbl((R.detector_bakeoff || [])[0]) +
+    ((R.ext_vol || [])[0] ? `<h3>Circuit-breaker sweep (profile settings)</h3>${tbl(R.ext_vol[0])}` : "");
+  const dsr = A.dsr;
+  P("log").innerHTML = (dsr ? `<div class="stats"><div class="stat"><b>${dsr.n_trials}</b><span>trials logged</span></div><div class="stat"><b>${fx(dsr.sr0_per_bar * Math.sqrt(A.bpy))}</b><span>Sharpe you'd expect from luck alone after this many trials</span></div><div class="stat"><b>${pct(dsr.dsr)}</b><span>deflated Sharpe probability (95% is the bar)</span></div></div>` : "") +
+    `<div class="tablewrap"><table><tr><th>#</th><th>Change</th><th>Decision</th><th>Reason</th></tr>` +
+    A.tuning_log.map((e) => `<tr><td>${e.n}</td><td style="text-align:left;font-family:var(--f-body)">${e.change}</td><td><span class="tag ${e.decision}">${e.decision}</span></td><td style="text-align:left;font-family:var(--f-body);white-space:normal;min-width:260px">${e.reason}</td></tr>`).join("") + "</table></div>" +
+    `<p class="small muted">Trying settings on this page doesn't add trials. Record the ones you'd actually adopt with the tuning_log command, so the luck bar stays honest.</p>`;
+  const rf = A.refits;
+  P("refits").innerHTML = `<div class="stats"><div class="stat"><b>${rf.total}</b><span>model fits in the walk-forward</span></div>` +
+    Object.entries(rf.by_reason).map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k.replace("_", " ")}</span></div>`).join("") + `</div>` +
+    `<p>Calendar refits run on schedule; drift refits fire when recent data fits the model badly (log-likelihood tripwire) or when the model stops being confident. Latest 25:</p>` +
+    tbl({ columns: ["date", "reason"], rows: rf.log.slice(-25).reverse().map((r) => [r.date, r.reason]) });
+  P("apply").innerHTML = `<p>When a setting here is worth keeping, copy it into <code>config/settings.yaml</code>, then run the validation and log the trial in one command. The YAML below always reflects the controls.</p><pre class="yaml"></pre>`;
+  P("apply").querySelector("pre").textContent = yamlSnippet();
+}
+document.addEventListener("input", () => { const p = panels.querySelector('[data-panel="apply"] pre'); if (p) p.textContent = yamlSnippet(); });
+document.addEventListener("change", () => { const p = panels.querySelector('[data-panel="apply"] pre'); if (p) p.textContent = yamlSnippet(); });
+
+legend(); syncControls(); render(); renderLab();
+selectTab(TABS.some(([k]) => k === store.get("rd.tab")) ? store.get("rd.tab") : "states");
+})();
+</script>

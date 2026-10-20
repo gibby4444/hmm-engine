@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pickle
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -84,6 +84,9 @@ def system_exposure(eng: RetrainEngine, inp: Inputs, gate: GateConfig | None, si
     g = apply_gates(P, gate or GateConfig(0.0, 1), index=fr.index)
     base = eng.exposure_for(g.regime, fr["version"].values, neutral_exposure)
     sz = sizing or SizingConfig(mode="hard")
+    if gate is not None and gate.confidence_threshold > 0 and sz.threshold != gate.confidence_threshold:
+        # Prompt 6: "at the gate threshold, size is floor%" — anchor to the gate actually in use
+        sz = replace(sz, threshold=gate.confidence_threshold)
     exp = final_exposure(base, g.confidence, sz, inp.prof["risk"])
     blog = pd.DataFrame()
     if breaker_level is not None:
